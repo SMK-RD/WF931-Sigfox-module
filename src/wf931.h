@@ -25,17 +25,18 @@
 class wf931Class
 {
 public:
-	void begin();
-	void end(){}
-	
-	void wakeup();
-	void sleep();
+  void begin();
+  void end(){}
 
-    void send(int8_t,int8_t,int8_t,int8_t,int8_t,int8_t,int8_t,int8_t,int8_t,int8_t,int8_t,int8_t);
-    void send(int16_t,int16_t,int16_t,int16_t,int16_t,int16_t);
-    void send(float,float,float);
+  void wakeup();
+  void sleep();
 
-	bool result();
+  void send(int8_t,int8_t,int8_t,int8_t,int8_t,int8_t,int8_t,int8_t,int8_t,int8_t,int8_t,int8_t);
+  void send(int16_t,int16_t,int16_t,int16_t,int16_t,int16_t);
+  void send(float,float,float);
+
+  bool result();
+
 };
 
 extern wf931Class wf931;
