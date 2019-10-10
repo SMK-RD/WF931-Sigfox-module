@@ -1,6 +1,6 @@
 /*
  *  wf931.ino - WF931(Sigfox Module) sample application
- *  Copyright 2018 Sony Semiconductor Solutions Corporation
+ *  Copyright 2019  Corporation
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -17,10 +17,12 @@
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include <arduino.h>
 #include <LowPower.h>
 #include <RTC.h>
 #include <Wire.h>
 
+#include <wf931.h>
 
 //**************** 温湿度・気圧センサ 変数宣言 ***************************************************
 uint8_t I2C_txBuffer[32];                   // I2C Transmit buffer
@@ -135,102 +137,6 @@ void pushed2()
   Serial.println("Pushed D22!");
 }
 
-//****************************** wf931 UART 返信応答確認 ****************************
-bool result() {
-  char c;
-  do{
-   c = Serial2.read();
-   printf("%c", c);
-   if(c==0xFF){
-    printf("Error!");
-    return false;
-   }
-  }while(c!='\r');    
-
-  // for LF
-  c = Serial2.read();
-  printf("%c", c);
-
-  return true;
-}
-
-//************************ WF931のリセット、ID取得 ********************************
-void wf931_job()
-{
-  // ********** WF931 リセット、ID取得 ***************
-  // Configure baud rate to 9600
-  Serial2.begin(9600);
-
-  // Configure reset pin
-  pinMode(PIN_D26, OUTPUT);
-
-  // Do reset
-  digitalWrite(PIN_D26, LOW);
-  delay(100);
-
-  // Release reset
-  digitalWrite(PIN_D26, HIGH);
-  delay(100);
-  result();
-
-  // Get chip ID
-  printf("ID = ");
-  Serial2.write("AT$ID?\r");
-  delay(100);
-  result();
-}
-
-//******************* WF931AT$SB=1の実行 ************************************
-void wf931_send()
-{
-  // WF931 wakeup.
-   Serial2.write("0x00");
-   delay(60);
-  
-   // Send state by WF931
-   Serial2.write("AT$SB=1\r");
-   printf("Send State = 1\n");
-   delay(100);
-   result();
-}
-
-//**************** WF931をDeep Sleep状態にセット *******************************
-void wf931Sleep()
-{
-   // WF931 wakeup.
-   Serial2.write("0x00");
-   delay(60);
-  
-   // Send deep sleep command to WF931
-   Serial2.write("AT$DSLEEP\r");
-   //printf("Send Deep Sleep command to WF931\n");
-   delay(100);
-   result();
-}
-
-//********************** DataをSigfox送信する　*********************************
-void send_sigfox(int8_t i0, int8_t i1, int8_t i2, int8_t i3, int8_t i4, int16_t i5, int8_t i7, int8_t i8, int8_t i9, int8_t i10, int8_t i11)
-{
-  String output2;
-  char val[24];
-  // wakeup.
-  Serial2.write("0x00");
-  delay(60);
-
-  // Send Data  
-  sprintf(val,"%02x%02x%02x%02x%02x%04x%02x%02x%02x%02x%02x", i0, i1, i2, i3, i4, i5, i7, i8, i9, i10, i11);
-  output2 = String(val);
-  Serial2.write("AT$SF=");
-  Serial2.write(val);
-  Serial2.write("\r");
-  
-  delay(100);
-  //result();
-   
-  Serial.print("SendData = ");
-  Serial.println(output2);  
-}
-
 //***************** BOSCH製 BME280 温湿度/気圧センサー情報の取得 ****************************** 
 void ReadDataBME280()
 {
@@ -266,7 +172,7 @@ void ReadDataBME280()
   
   int i = 0;
 
-  Wire.requestFrom(I2CSLAVE_BME280, 1);
+  Wire.requestFrom(I2CSLAVE_BME280, (uint8_t)1);
   Wire.beginTransmission(I2CSLAVE_BME280);
   //Wire.write(reset_reg);  
   //Wire.write(reset); 
@@ -286,14 +192,14 @@ void ReadDataBME280()
   // 0x88から24byte (温度、気圧のキャリブレーションデータの読込み）
   // I2Cアドレス 0x76 write
   I2C_txBuffer[0] = 0x88;
-  Wire.requestFrom(I2CSLAVE_BME280, 1);
+  Wire.requestFrom(I2CSLAVE_BME280, (uint8_t)1);
   Wire.beginTransmission(I2CSLAVE_BME280);
   Wire.write(I2C_txBuffer[0]);
   Wire.endTransmission(false);
   // I2Cアドレス 0x76 read  24bytes 
   for(i = 0; i < 24; i++)
   { 
-    Wire.requestFrom(I2CSLAVE_BME280, 1); 
+    Wire.requestFrom(I2CSLAVE_BME280, (uint8_t)1); 
     calib_data[i] = Wire.read();
   }
 
@@ -304,7 +210,7 @@ void ReadDataBME280()
   Wire.write(I2C_txBuffer[0]);
   Wire.endTransmission(false);
   // I2Cアドレス 0x76 read  1byte
-  Wire.requestFrom(I2CSLAVE_BME280, 1);   
+  Wire.requestFrom(I2CSLAVE_BME280, (uint8_t)1);
   i = 24;
   calib_data[i] = Wire.read();    // dig_H1[7:0]  i=24  
   
@@ -317,7 +223,7 @@ void ReadDataBME280()
   // I2Cアドレス 0x76 read  7byte 
   for(int i = 0; i < 7; i++)
   {
-    Wire.requestFrom(I2CSLAVE_BME280, 1); 
+    Wire.requestFrom(I2CSLAVE_BME280, (uint8_t)1); 
     calib_data[25 + i] = Wire.read();
   }
 
@@ -357,7 +263,7 @@ void ReadDataBME280()
   // I2Cアドレス 0x76 read  8byte
   for(i = 0; i < 8; i++)
   {        
-    Wire.requestFrom(I2CSLAVE_BME280, 1); 
+    Wire.requestFrom(I2CSLAVE_BME280, (uint8_t)1);
     raw_data[i] = Wire.read();
   }
 
@@ -482,12 +388,13 @@ void tpmMeasure(void)
   msg[7] = (uint8_t)(modf_dec * 100.0);
 
   Serial.println("Sigfox send data");
-  send_sigfox((int8_t)(msg[0]),
+  wf931.send((int8_t)(msg[0]),
               (int8_t)(msg[1]),
               (int8_t)(msg[2]),
               (int8_t)(msg[3]),
               (int8_t)(msg[4]),
-              (int16_t)(msgP),
+              (int8_t)(0xff & msgP),
+              (int8_t)(0xff & (msgP>>8)),
               (int8_t)(msg[7]),
               (int8_t)(msg[8]),
               (int8_t)(msg[9]),
@@ -500,7 +407,7 @@ void tpmMeasure(void)
 //************** セットアップ ***********************************************
 void setup()
 {
-  wf931_job();
+  wf931.begin();
 
   Wire.begin(); // I2Cの接続
 
@@ -548,7 +455,7 @@ void setup()
   Serial.print("Go to cold sleep...\n");
 
   // wf931 go to deep sleep
-  wf931Sleep();
+  wf931.sleep();
   
   // Go to deep sleep during about <wakeupTime> seconds
   //LowPower.deepSleep(wakeupTime - CorrectionValue);
